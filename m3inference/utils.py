@@ -6,7 +6,10 @@ from random import shuffle
 import hashlib
 import logging
 import numpy as np
-import pycld2 as cld2
+# # I could not install pycld2 or gcld3 into Windows 11, Python 3.11
+# # so I used https://github.com/pemistahl/lingua-py instead
+# import pycld2 as cld2
+from lingua import Language, LanguageDetectorBuilder
 import random
 import re
 import requests
@@ -16,6 +19,9 @@ from torch.nn.utils.rnn import *
 from tqdm import tqdm
 
 from .consts import *
+
+languages = Language.all()
+language_detector = LanguageDetectorBuilder.from_languages(*languages).build()
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +61,11 @@ def unpack_wrapper(sents, idx_unsort):
 
 
 def get_lang(sent):
-    lang = cld2.detect(''.join([i for i in sent if i.isprintable()]), bestEffort=True)[2][0][1]
+    # lang = cld2.detect(''.join([i for i in sent if i.isprintable()]), bestEffort=True)[2][0][1]
+    lang = language_detector.detect_language_of(sent)
+    if(lang == None):
+        return None
+    lang = lang.iso_code_639_1.name.lower()
     return UNKNOWN_LANG if lang not in LANGS else lang
 
 
