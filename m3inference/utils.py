@@ -15,6 +15,7 @@ import re
 import requests
 import shutil
 import tempfile
+import torch
 from torch.nn.utils.rnn import *
 from tqdm import tqdm
 
