@@ -8,6 +8,7 @@ import logging
 import os
 from rauth import OAuth1Service
 from os.path import expanduser
+from concurrent.futures import ThreadPoolExecutor
 
 from .consts import UNKNOWN_LANG, TW_DEFAULT_PROFILE_IMG
 from .m3inference import M3Inference
@@ -50,6 +51,44 @@ class M3Twitter(M3Inference):
                     m3vals = self.transform_jsonl_object(line, img_path_key=img_path_key, lang_key=lang_key,
                                                          resize_img=resize_img, keep_full_size_img=keep_full_size_img, download_img=download_img)
                     fhOut.write("{}\n".format(json.dumps(m3vals)))
+
+
+    def transform_jsonl_with_concurrency(self, input_file, output_file, img_path_key=None, lang_key=None, resize_img=True,
+                        keep_full_size_img=False, download_img=False, concurrency=4):
+        def __process_line__(line):
+            m3vals = self.transform_jsonl_object(line, img_path_key=img_path_key, lang_key=lang_key,
+                                                 resize_img=resize_img, keep_full_size_img=keep_full_size_img,
+                                                 download_img=download_img)
+            return json.dumps(m3vals) + "\n"
+
+        with open(input_file, "r") as fhIn:
+            with ThreadPoolExecutor(max_workers=concurrency) as executor:
+                processed_lines = list(executor.map(__process_line__, fhIn))
+
+        with open(output_file, "w") as fhOut:
+            fhOut.writelines(processed_lines)
+
+
+    def transform_jsonl_objects_without_concurrency(self, input_data, img_path_key=None, lang_key=None, resize_img=True,
+                        keep_full_size_img=False, download_img=False):
+        
+        return [self.transform_jsonl_object(line, img_path_key=img_path_key, lang_key=lang_key,
+                                                    resize_img=resize_img, keep_full_size_img=keep_full_size_img, download_img=download_img) 
+                for line in input_data]        
+
+
+    def transform_jsonl_objects_with_concurrency(self, input_data, img_path_key=None, lang_key=None, resize_img=True,
+                                             keep_full_size_img=False, download_img=False, concurrency=4):
+        def __process_line__(line):
+            return self.transform_jsonl_object(line, img_path_key=img_path_key, lang_key=lang_key,
+                                               resize_img=resize_img, keep_full_size_img=keep_full_size_img,
+                                               download_img=download_img)
+
+        with ThreadPoolExecutor(max_workers=concurrency) as executor:
+            processed_objects = list(executor.map(__process_line__, input_data))
+
+        return processed_objects
+
 
     def transform_jsonl_object(self, input, img_path_key=None, lang_key=None, resize_img=True,
                                keep_full_size_img=False, download_img=False):
