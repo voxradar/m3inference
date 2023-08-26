@@ -16,6 +16,11 @@ If the URL of this repository changes, replace `https://github.com/thanhan910/m3
 - Added a flag to skip downloading images.
     - Downloading images might be time consuming, so I added a flag called `download_img` to skip downloading the profile images if necessary. 
 
+- Added `download_image_from_jsonl_object` in `utils.py`:
+    - Download a profile image from a JSONL Twitter or User object. 
+    - This allows the download image process to not coupled with the `get_lang` process like in the `transform_jsonl_object` function.
+    - Thus, to optimize performance, if you don't need to download image or use a language detector model, instead of using `transform_jsonl_object` or `transform_jsonl`, transform the JSONL object beforehand without using those functions, use `get_lang` on the `description` if you need to, then just use `infer` to infer the demographic attributes.
+    
 
 ## M3-Inference README.md
 This is a PyTorch implementation of the M3 (Multimodal, Multilingual, and Multi-attribute) system described in the WebConf (WWW) 2019 paper [Demographic Inference and Representative Population Estimates from Multilingual Social Media Data](https://doi.org/10.1145/3308558.3313684).

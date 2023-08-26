@@ -2,7 +2,7 @@
 # @Zijian Wang
 
 from random import shuffle
-
+import json
 import hashlib
 import logging
 import numpy as np
@@ -20,6 +20,7 @@ from torch.nn.utils.rnn import *
 from tqdm import tqdm
 
 from .consts import *
+from .preprocess import download_resize_img
 
 languages = Language.all()
 language_detector = LanguageDetectorBuilder.from_languages(*languages).build()
@@ -137,3 +138,90 @@ def check_file_md5(model_name, model_path):
         logger.error('MD5s mismatch. Consider clean your tmp dir (default: `./m3_tmp`) and retry,'
                      ' or download from the link in our github repo.')
         return False
+
+
+def get_extension(img_path):
+    if '.' not in img_path.split('/')[-1]:
+        return 'png'
+    dotpos = img_path.rfind(".")
+    extension = img_path[dotpos + 1:]
+    if extension.lower() == "gif":
+        return "png"
+    return extension
+
+
+def download_image_from_jsonl_object(input, cache_dir, img_path_key=None,  resize_img=True, keep_full_size_img=False):
+        """
+        A method to download image given the input jsonl object
+
+        Parameters:
+        -----------
+        cache_dir: str
+            The directory to store the downloaded images
+        input: dict
+
+            `input` is either a Twitter tweet object (https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/tweet-object) or a Twitter user object (https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/user-object)
+            
+            `input` can be a string in json format or a dictionary or an object
+
+        img_path_key: str
+            The key to the image path in the input object. If None, the function will try to find the image path in the input object.
+
+        resize_img: bool
+            Whether to resize the image to 224x224. Default: True
+
+        keep_full_size_img: bool
+            Whether to keep the full size image. Default: False
+
+        Returns:
+        --------
+        """
+
+        if isinstance(input, str): input = json.loads(input)
+
+        # Detect user
+        user = input["user"] if "user" in input else input
+
+        if img_path_key != None and img_path_key in user:
+            
+            img_url = user[img_path_key]
+            
+            if resize_img:
+                img_file_resize = f"{cache_dir}/{user['id_str']}_224x224.{get_extension(img_url)}"
+                download_resize_img(img_url, img_file_resize)
+            else:
+                img_file_resize = img_url
+
+        elif img_path_key != None and img_path_key in input:
+            
+            img_url = input[img_path_key]
+            
+            if resize_img:
+                img_file_resize = f"{cache_dir}/{user['id_str']}_224x224.{get_extension(img_url)}"
+                download_resize_img(img_url, img_file_resize)
+            else:
+                img_file_resize = img_url
+
+        elif user["default_profile_image"]:
+            # Default profile image
+            img_file_resize = TW_DEFAULT_PROFILE_IMG
+
+        else:
+            img_url = user["profile_image_url_https"]
+            img_url = img_url.replace("_normal", "_400x400")
+            dotpos = img_url.rfind(".")
+            img_file_full = f"{cache_dir}/{user['id_str']}.{img_url[dotpos + 1:]}"
+            img_file_resize = f"{cache_dir}/{user['id_str']}_224x224.{get_extension(img_url)}"
+            
+            if not os.path.isfile(img_file_resize):
+                if keep_full_size_img:
+                    download_resize_img(img_url, img_file_resize, img_file_full)
+                else:
+                    download_resize_img(img_url, img_file_resize)
+            
+        # check if an error occurred and the image was not downloaded
+        if not os.path.exists(img_file_resize):
+            img_file_resize = TW_DEFAULT_PROFILE_IMG
+
+        return img_file_resize
+
