@@ -1,13 +1,12 @@
-# M3-Inference-2
+# M3-Inference
 This is a fork of the m3inference package at [https://github.com/euagendas/m3inference](https://github.com/euagendas/m3inference), with a few changes to the source code.
-To distinguish this package with the original package, we will name this package as `m3inference2`
 
-## Install m3inference2
+## Install this package
 To install this package using `pip`, run
 ```bash
-pip install git+https://github.com/thanhan910/m3inference2.git
+pip install git+https://github.com/thanhan910/m3inference.git
 ```
-If the URL of this repository changes, replace `https://github.com/thanhan910/m3inference2.git` with the new URL.
+If the URL of this repository changes, replace `https://github.com/thanhan910/m3inference.git` with the new URL.
 
 ## Changes compared to the orignial package
 - Replaced `pycld2` with another language detector model, specifically `lingua` by Peter M. Stahl. See [https://github.com/pemistahl/lingua-py](https://github.com/pemistahl/lingua-py).
