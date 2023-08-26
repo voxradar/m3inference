@@ -7,7 +7,7 @@ with open('requirements.txt') as f:
     reqs = f.read()
 
 setuptools.setup(
-    name='m3inference',
+    name='m3inference2',
     version='1.1.5',
     author='Zijian Wang et al.',
     author_email='zijwang@stanford.edu',
