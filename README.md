@@ -15,8 +15,6 @@ If the URL of this repository changes, replace `https://github.com/thanhan910/m3
     - The only use of `pycld2` is in the `get_lang` function in `utils.py`.
 - Added a flag to skip downloading images.
     - Downloading images might be time consuming, so I added a flag called `download_img` to skip downloading the profile images if necessary. 
-- Added concurrency to `transform_jsonl` in the `M3Twitter` class.
-    - The `get_lang` function might be very slow, so I added some concurrency to the `transform_jsonl` function.
 
 
 ## M3-Inference README.md
