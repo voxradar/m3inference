@@ -66,7 +66,7 @@ def get_lang(sent):
     # lang = cld2.detect(''.join([i for i in sent if i.isprintable()]), bestEffort=True)[2][0][1]
     lang = language_detector.detect_language_of(sent)
     if(lang == None):
-        return None
+        return UNKNOWN_LANG
     lang = lang.iso_code_639_1.name.lower()
     return UNKNOWN_LANG if lang not in LANGS else lang
 
