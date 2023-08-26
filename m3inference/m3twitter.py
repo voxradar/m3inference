@@ -43,16 +43,16 @@ class M3Twitter(M3Inference):
             logger.info(f'Dir {self.cache_dir} created.')
 
     def transform_jsonl(self, input_file, output_file, img_path_key=None, lang_key=None, resize_img=True,
-                        keep_full_size_img=False):
+                        keep_full_size_img=False, download_img=False):
         with open(input_file, "r") as fhIn:
             with open(output_file, "w") as fhOut:
                 for line in fhIn:
                     m3vals = self.transform_jsonl_object(line, img_path_key=img_path_key, lang_key=lang_key,
-                                                         resize_img=resize_img, keep_full_size_img=keep_full_size_img)
+                                                         resize_img=resize_img, keep_full_size_img=keep_full_size_img, download_img=download_img)
                     fhOut.write("{}\n".format(json.dumps(m3vals)))
 
     def transform_jsonl_object(self, input, img_path_key=None, lang_key=None, resize_img=True,
-                               keep_full_size_img=False):
+                               keep_full_size_img=False, download_img=False):
         """
         input is either a Twitter tweet object (https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/tweet-object)
             or a Twitter user object (https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/user-object)
@@ -60,47 +60,53 @@ class M3Twitter(M3Inference):
         if isinstance(input, str):
             input = json.loads(input)
 
+        # Detect user
         if "user" in input:
             user = input["user"]
         else:
             user = input
 
-        if img_path_key != None and img_path_key in user:
-            img_path = user[img_path_key]
-            if resize_img:
-                img_file_resize = "{}/{}_224x224.{}".format(self.cache_dir, user["id_str"], get_extension(img_path))
-                download_resize_img(img_path, img_file_resize)
-            else:
-                img_file_resize = img_path
-        elif img_path_key != None and img_path_key in input:
-            img_path = input[img_path_key]
-            if resize_img:
-                img_file_resize = "{}/{}_224x224.{}".format(self.cache_dir, user["id_str"], get_extension(img_path))
-                download_resize_img(img_path, img_file_resize)
-            else:
-                img_file_resize = img_path
-        elif user["default_profile_image"]:
-            # Default profile image
-            img_file_resize = TW_DEFAULT_PROFILE_IMG
-        else:
-            img_path = user["profile_image_url_https"]
-            img_path = img_path.replace("_normal", "_400x400")
-            dotpos = img_path.rfind(".")
-            img_file_full = "{}/{}.{}".format(self.cache_dir, user["id_str"], img_path[dotpos + 1:])
-            img_file_resize = "{}/{}_224x224.{}".format(self.cache_dir, user["id_str"], get_extension(img_path))
-            if not os.path.isfile(img_file_resize):
-                if keep_full_size_img:
-                    download_resize_img(img_path, img_file_resize, img_file_full)
-                else:
+        # Detect image
+        # NOTE: Downloading the image takes a lot of time so I added a flag to skip it if you don't need it.
+        if(download_img):
+            if img_path_key != None and img_path_key in user:
+                img_path = user[img_path_key]
+                if resize_img:
+                    img_file_resize = "{}/{}_224x224.{}".format(self.cache_dir, user["id_str"], get_extension(img_path))
                     download_resize_img(img_path, img_file_resize)
-        # check if an error occurred and the image was not downloaded
-        if not os.path.exists(img_file_resize):
-            img_file_resize = TW_DEFAULT_PROFILE_IMG
+                else:
+                    img_file_resize = img_path
+            elif img_path_key != None and img_path_key in input:
+                img_path = input[img_path_key]
+                if resize_img:
+                    img_file_resize = "{}/{}_224x224.{}".format(self.cache_dir, user["id_str"], get_extension(img_path))
+                    download_resize_img(img_path, img_file_resize)
+                else:
+                    img_file_resize = img_path
+            elif user["default_profile_image"]:
+                # Default profile image
+                img_file_resize = TW_DEFAULT_PROFILE_IMG
+            else:
+                img_path = user["profile_image_url_https"]
+                img_path = img_path.replace("_normal", "_400x400")
+                dotpos = img_path.rfind(".")
+                img_file_full = "{}/{}.{}".format(self.cache_dir, user["id_str"], img_path[dotpos + 1:])
+                img_file_resize = "{}/{}_224x224.{}".format(self.cache_dir, user["id_str"], get_extension(img_path))
+                if not os.path.isfile(img_file_resize):
+                    if keep_full_size_img:
+                        download_resize_img(img_path, img_file_resize, img_file_full)
+                    else:
+                        download_resize_img(img_path, img_file_resize)
+            # check if an error occurred and the image was not downloaded
+            if not os.path.exists(img_file_resize):
+                img_file_resize = TW_DEFAULT_PROFILE_IMG
 
+        # Detect description
         bio = user["description"]
         if bio == None:
             bio = ""
 
+        # Detect language
         if lang_key != None and lang_key in user:
             lang = user[lang_key]
         elif lang_key != None and lang_key in input:
@@ -113,14 +119,18 @@ class M3Twitter(M3Inference):
         output = {
             "description": bio,
             "id": user["id_str"],
-            "img_path": img_file_resize,
+            # "img_path": img_file_resize if download_img else TW_DEFAULT_PROFILE_IMG,
             "lang": lang,
             "name": user["name"],
             "screen_name": user["screen_name"]
         }
+
+        if download_img:
+            output["img_path"] = img_file_resize
+
         return output
 
-    def infer_screen_name(self, screen_name, skip_cache=False):
+    def infer_screen_name(self, screen_name, skip_cache=False, download_img=False):
         """
         Collect data for a Twitter screen name from the Twitter website and predict attributes with m3
         :param scren_name: A Twitter screen_name. Do not include the "@"
@@ -141,7 +151,7 @@ class M3Twitter(M3Inference):
         else:
             logger.info("skip_cache is True. Fetching data from Twitter for {}.".format(screen_name))
 
-        output = self._twitter_api(screen_name=screen_name)
+        output = self._twitter_api(screen_name=screen_name, download_img=download_img)
         with open("{}/{}.json".format(self.cache_dir, screen_name), "w") as fh:
             json.dump(output, fh)
         return output
@@ -167,7 +177,7 @@ class M3Twitter(M3Inference):
         self.twitter_session = twitter.get_session(token=[access_token,access_secret])
         return True
 
-    def _twitter_api(self,id=None,screen_name=None):
+    def _twitter_api(self,id=None,screen_name=None, download_img=False):
         if self.twitter_session==None:
             logger.fatal("You must call twitter_init(...) before using this method. Please see https://github.com/euagendas/m3inference/blob/master/README.md for details.")
             return None
@@ -190,10 +200,10 @@ class M3Twitter(M3Inference):
             logger.fatal("No id or screen_name")
             return None
         
-        return self.process_twitter(r.json())
+        return self.process_twitter(r.json(), download_img=download_img)
 
 
-    def infer_id(self, id, skip_cache=False):
+    def infer_id(self, id, skip_cache=False, download_img=False):
         """
         Collect data for a numeric Twitter user id from the Twitter website and predict attributes with m3
         :param id: A Twitter numeric user id
@@ -211,7 +221,7 @@ class M3Twitter(M3Inference):
         else:
             logger.info("skip_cache is True. Fetching data from Twitter for id {}.".format(id))
 
-        output=self._twitter_api(id=id)
+        output=self._twitter_api(id=id, download_img=download_img)
         with open("{}/{}.json".format(self.cache_dir, id), "w") as fh:
             json.dump(output, fh)
         return output
@@ -223,7 +233,7 @@ class M3Twitter(M3Inference):
             logger.warning("Could not retreive {}".format(key))
             return ""
 
-    def process_twitter(self, data):
+    def process_twitter(self, data, download_img=False):
         
         screen_name=self._get_twitter_attrib("screen_name",data)
         id=self._get_twitter_attrib("id_str",data)
@@ -238,25 +248,29 @@ class M3Twitter(M3Inference):
         else:
             lang = get_lang(bio)
         
-        if img_path=="" or "default_profile" in img_path:
-            logger.warning("Unable to extract image from Twitter. Using default image.")
-            img_file_resize = TW_DEFAULT_PROFILE_IMG
-        else:
-            img_path = img_path.replace("_200x200", "_400x400").replace("_normal", "_400x400")
-            img_file_full = f"{self.cache_dir}/{id}" + (f".{img_path[img_path.rfind('.') + 1:]}" if '.' in img_path.split('/')[-1] else '')
-            img_file_resize = "{}/{}_224x224.{}".format(self.cache_dir, id, get_extension(img_path))
-#             img_file_full = "{}/{}.{}".format(self.cache_dir, screen_name, img[dotpos + 1:])
-#             img_file_resize = "{}/{}_224x224.{}".format(self.cache_dir, screen_name, get_extension(img))
-            download_resize_img(img_path, img_file_resize, img_file_full)
+        if download_img:
+            if img_path=="" or "default_profile" in img_path:
+                logger.warning("Unable to extract image from Twitter. Using default image.")
+                img_file_resize = TW_DEFAULT_PROFILE_IMG
+            else:
+                img_path = img_path.replace("_200x200", "_400x400").replace("_normal", "_400x400")
+                img_file_full = f"{self.cache_dir}/{id}" + (f".{img_path[img_path.rfind('.') + 1:]}" if '.' in img_path.split('/')[-1] else '')
+                img_file_resize = "{}/{}_224x224.{}".format(self.cache_dir, id, get_extension(img_path))
+    #             img_file_full = "{}/{}.{}".format(self.cache_dir, screen_name, img[dotpos + 1:])
+    #             img_file_resize = "{}/{}_224x224.{}".format(self.cache_dir, screen_name, get_extension(img))
+                download_resize_img(img_path, img_file_resize, img_file_full)
 
         data = [{
             "description": bio,
             "id": id,
-            "img_path": img_file_resize,
+            # "img_path": img_file_resize,
             "lang": lang,
             "name": name,
             "screen_name": screen_name,
         }]
+
+        if download_img:
+            data[0]["img_path"] = img_file_resize
 
         pred = self.infer(data, batch_size=1, num_workers=1)
 
