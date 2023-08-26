@@ -9,8 +9,10 @@ pip install git+https://github.com/thanhan910/m3inference.git
 If the URL of this repository changes, replace `https://github.com/thanhan910/m3inference.git` with the new URL.
 
 ## Changes compared to the orignial package
-- Replaced `pycld2` with another language detector model, specifically `lingua` by Peter M. Stahl. See [https://github.com/pemistahl/lingua-py](https://github.com/pemistahl/lingua-py).
-    - I tried to install `m3inference` on Windows and I could not complete it because I could not install `pycld2`. So I replaced `pycld2` with `lingua`. THe only use of `pycld2` is in the `get_lang` function in `utils.py`.
+- Replaced `pycld2` with another language detector model, specifically `lingua` by Peter M. Stahl.
+    - See [https://github.com/pemistahl/lingua-py](https://github.com/pemistahl/lingua-py) for information on the `lingua` package.
+    - I tried to install `m3inference` on Windows and I could not complete it because I could not install `pycld2`. So I replaced `pycld2` with `lingua`.
+    - The only use of `pycld2` is in the `get_lang` function in `utils.py`.
 - Added a flag to skip downloading images.
     - Downloading images might be time consuming, so I added a flag called `download_img` to skip downloading the profile images if necessary. 
 - Added concurrency to `transform_jsonl` in the `M3Twitter` class.
