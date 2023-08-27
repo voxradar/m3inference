@@ -70,6 +70,8 @@ def get_lang(sent):
     #     return UNKNOWN_LANG
     # lang = lang.iso_code_639_1.name.lower()
     lang = translator.detect(sent).lang
+    if(type(lang) == list):
+        lang = lang[0] # Just temporary
     return UNKNOWN_LANG if lang not in LANGS else lang
 
 
@@ -227,3 +229,66 @@ def download_image_from_jsonl_object(input, cache_dir, img_path_key=None,  resiz
 
         return img_file_resize
 
+
+def transform_jsonl_object_for_m3inference_text_model(input, translate_description=False, use_language_detector=False, prioritize_language_detector=False):
+        """
+        A method to transform the input jsonl object to the format that can be used by the m3inference text model
+
+        input is either a Twitter tweet object (https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/tweet-object)
+            or a Twitter user object (https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/user-object)
+        """
+        if isinstance(input, str):
+            input = json.loads(input)
+
+        # Detect user
+        user = input["user"] if "user" in input else input
+
+        # Detect description
+        description = user["description"]
+        if description == None:
+            description = ""
+
+        # Detect language
+        
+        lang = None
+
+        if translate_description:
+            description = translator.translate(description).text
+            lang = 'en'
+            
+        if lang == None and 'lang' in user:
+            lang = user['lang']
+        
+        if lang == None and 'lang' in input:
+            lang = input['lang']
+
+        if not translate_description and prioritize_language_detector:
+            detection = translator.detect(description)
+            
+            if(type(detection.lang) == list):
+                # create a map of language to confidence
+                confidence_map = dict(zip(detection.lang, detection.confidence))
+
+                if lang in confidence_map:
+                    confidence_map[lang] += 1
+                # get the language with the highest confidence
+                lang = max(confidence_map, key=confidence_map.get)
+            else:
+                lang = detection.lang
+
+        if lang == None and description != "" and use_language_detector:
+            lang = translator.detect(description).lang
+        
+        if lang == None:
+            lang = UNKNOWN_LANG
+
+        output = {
+            "description": description,
+            "id": user["id_str"],
+            # "img_path": img_file_resize if download_img else TW_DEFAULT_PROFILE_IMG,
+            "lang": lang,
+            "name": user["name"],
+            "screen_name": user["screen_name"]
+        }
+
+        return output
