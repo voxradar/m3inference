@@ -69,7 +69,7 @@ def get_lang(sent):
     # if(lang == None):
     #     return UNKNOWN_LANG
     # lang = lang.iso_code_639_1.name.lower()
-    lang = translator.detect(sent)
+    lang = translator.detect(sent).lang
     return UNKNOWN_LANG if lang not in LANGS else lang
 
 
