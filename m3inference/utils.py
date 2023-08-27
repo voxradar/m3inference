@@ -7,9 +7,11 @@ import hashlib
 import logging
 import numpy as np
 # # I could not install pycld2 or gcld3 into Windows 11, Python 3.11
-# # so I used https://github.com/pemistahl/lingua-py instead
+# # so I used googletrans instead
+# # Another option is https://github.com/pemistahl/lingua-py
 # import pycld2 as cld2
-from lingua import Language, LanguageDetectorBuilder
+# from lingua import Language, LanguageDetectorBuilder
+from googletrans import Translator
 import random
 import re
 import requests
@@ -22,8 +24,7 @@ from tqdm import tqdm
 from .consts import *
 from .preprocess import download_resize_img
 
-languages = Language.all()
-language_detector = LanguageDetectorBuilder.from_languages(*languages).build()
+translator = Translator()
 
 logger = logging.getLogger(__name__)
 
@@ -64,10 +65,11 @@ def unpack_wrapper(sents, idx_unsort):
 
 def get_lang(sent):
     # lang = cld2.detect(''.join([i for i in sent if i.isprintable()]), bestEffort=True)[2][0][1]
-    lang = language_detector.detect_language_of(sent)
-    if(lang == None):
-        return UNKNOWN_LANG
-    lang = lang.iso_code_639_1.name.lower()
+    # lang = language_detector.detect_language_of(sent)
+    # if(lang == None):
+    #     return UNKNOWN_LANG
+    # lang = lang.iso_code_639_1.name.lower()
+    lang = translator.detect(sent)
     return UNKNOWN_LANG if lang not in LANGS else lang
 
 
