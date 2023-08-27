@@ -270,7 +270,7 @@ def transform_jsonl_object_for_m3inference_text_model(input, translate_descripti
                 confidence_map = dict(zip(detection.lang, detection.confidence))
 
                 if lang in confidence_map:
-                    confidence_map[lang] += 1
+                    confidence_map[lang] += 0.5
                 # get the language with the highest confidence
                 lang = max(confidence_map, key=confidence_map.get)
             else:
@@ -279,7 +279,7 @@ def transform_jsonl_object_for_m3inference_text_model(input, translate_descripti
         if lang == None and description != "" and use_language_detector:
             lang = translator.detect(description).lang
         
-        if lang == None:
+        if lang not in LANGS:
             lang = UNKNOWN_LANG
 
         output = {
